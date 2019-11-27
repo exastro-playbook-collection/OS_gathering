@@ -1,2 +1,18 @@
 ---
-# tasks file for OS_gathering
+  - name: check param VAR_OS_gathering_rolename is none
+    fail:
+      msg: "Parameter VAR_OS_gathering_rolename cannot be NULL."
+    when: "(VAR_OS_gathering_rolename is none) or (VAR_OS_gathering_rolename == '')"
+
+  - name: Remove old data
+    file:
+      path: "{{ VAR_OS_gathering_dest }}/{{ inventory_hostname }}/OS"
+      state: absent
+    delegate_to: localhost
+    become: no
+
+  - name: include tasks
+    include_tasks: gather.yml
+    with_items: "{{ VAR_OS_gathering_rolename }}"
+    loop_control:
+      loop_var: outer_item

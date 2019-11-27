@@ -1,0 +1,39 @@
+---
+  - name: check param VAR_OS_gathering_rolename subElement
+    stat:
+      path: "{{ playbook_dir }}/roles/{{ outer_item }}"
+    delegate_to: localhost
+    become: no
+    register: file_exist
+
+  - name: fail when file not exist
+    fail:
+      msg: "There is no {{ outer_item }} in the {{ playbook_dir }}/roles directory."
+    when: file_exist.stat.exists == false
+
+  - name: check param VAR_OS_gathering_dest
+    fail:
+      msg: "Parameter VAR_OS_gathering_dest cannot be NULL."
+    when: "(VAR_OS_gathering_dest is none) or (VAR_OS_gathering_dest == '')"
+
+  - name: set param role_name
+    set_fact:
+      roleName: "{{ outer_item.split('/') | last }}"
+
+  - name: get role evident
+    block:
+      - name: import roles
+        import_role:
+          name: '{{ playbook_dir }}/roles/gathering'
+        vars:
+          VAR_gathering_definition_role_path: '{{ playbook_dir }}/roles/{{ outer_item }}'
+          VAR_gathering_label: "{{ roleName }}"
+
+      - name: Copy data
+        copy:
+          src: "{{ gathered_data_dest }}/"
+          dest: "{{ VAR_OS_gathering_dest }}/{{ inventory_hostname }}/OS/{{ roleName }}"
+        delegate_to: localhost
+        become: no
+
+    when: "((ansible_os_family != 'Windows') and ('RHEL' in outer_item.split('/'))) or ((ansible_os_family == 'Windows') and ('Windows' in outer_item.split('/')))"
